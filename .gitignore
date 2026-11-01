@@ -1,0 +1,39 @@
+# 外部のもの・大きいもの（Drive 上にだけ置く）
+# huggingface/lerobot の clone（scripts/setup_lerobot.sh）。学習・評価の出力 lerobot/outputs/ もこの中
+/lerobot/
+# 学習データのコピー（数 GB〜）
+/datasets/
+/outputs/
+
+# 大きなバイナリ・生成物（念のため、どこにあっても無視する）
+*.safetensors
+*.bin
+*.pt
+*.pth
+*.ckpt
+*.parquet
+*.arrow
+*.hdf5
+*.h5
+*.npz
+*.npy
+*.mp4
+*.avi
+*.gif
+*.png
+*.jpg
+*.zip
+*.tar
+*.tgz
+*.tar.gz
+*.log
+*.out
+*.pid
+
+# Python / Jupyter / エディタ
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+.ruff_cache/
+.DS_Store

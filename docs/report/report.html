@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>トースターでパンを焼いて食卓まで運ぶロボット</title>
+<style>
+  :root {
+    --surface: #fcfcfb;
+    --page: #ffffff;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --plane: #f4f3ef;
+    --accent: #1c5cab;
+  }
+  @page { size: A4; margin: 11mm 13mm 13mm 13mm; }
+  * { box-sizing: border-box; }
+  html { background: var(--page); }
+  body {
+    margin: 0 auto;
+    max-width: 184mm;
+    padding: 0;
+    color: var(--ink);
+    font-family: "IPAPGothic", "IPAGothic", "Hiragino Sans", "Noto Sans JP", "Yu Gothic", sans-serif;
+    font-size: 8.8pt;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  @media screen { body { padding: 10mm 0 16mm; } }
+  h1 { font-size: 14.5pt; line-height: 1.3; margin: 0 0 2.4mm; }
+  h2 {
+    font-size: 11pt; margin: 3.4mm 0 1.6mm; padding: 0.6mm 0 0.6mm 2.2mm;
+    border-left: 1.1mm solid var(--accent); line-height: 1.35; break-after: avoid;
+  }
+  p { margin: 0 0 1.4mm; }
+  ol, ul { margin: 0 0 1.6mm; padding-left: 5mm; }
+  li { margin: 0.3mm 0; }
+  li > ul { margin: 0.3mm 0 0; }
+  code {
+    font-family: "DejaVu Sans Mono", "IPAGothic", monospace;
+    font-size: 0.85em; background: var(--plane); border-radius: 2px; padding: 0.05em 0.3em;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin: 0.8mm 0 1.8mm; font-size: 8.1pt; line-height: 1.45; }
+  tr { break-inside: avoid; }
+  th, td { border-bottom: 1px solid var(--grid); padding: 0.8mm 1.6mm; text-align: left; vertical-align: top; }
+  thead th { background: var(--plane); border-bottom: 1px solid var(--axis); font-weight: bold; }
+  th:first-child, td:first-child { white-space: nowrap; width: 1%; }
+  td[style*="right"], th[style*="right"] { text-align: right; white-space: nowrap; }
+
+  /* 図の見出し（太字だけの段落）と、その直後の表・説明をひとまとまりに見せる */
+  p:has(> strong:only-child) { margin: 2.4mm 0 0.6mm; font-size: 8.4pt; break-after: avoid; }
+  p:has(> strong:only-child) + table { width: auto; min-width: 50%; margin-bottom: 0.8mm; break-inside: avoid; }
+  p:has(> strong:only-child) + table th:first-child,
+  p:has(> strong:only-child) + table td:first-child { width: auto; }
+  p:has(> strong:only-child) + table + p { color: var(--ink-2); font-size: 8pt; }
+</style>
+</head>
+<body>
+<h1 id="トースターでパンを焼いて食卓まで運ぶロボット">トースターでパンを焼いて食卓まで運ぶロボット</h1>
+<h2 id="1-タスクの概要と目的">1. タスクの概要と目的</h2>
+<p>Pi0.5 は、カメラ画像と言語の指示からロボットの行動を出力する VLA（Vision-Language-Action）モデルである。LeRobot の公開チェックポイントは、家庭のキッチンを模したシミュレーション環境 RoboCasa には対応していない。
+本作業では、RoboCasa のタスク GetToastedBread を追加学習し、タスクに適用させることを目的とした。</p>
+<table>
+<thead>
+<tr class="header">
+<th>項目</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>内容</strong></td>
+<td>トースターのレバーを押して作動させ、レバーが上がる（ポップアップ、作動から 25 秒後）のを待ってから、パンをダイニングカウンターの皿に置いて手を離す。「押す → 待つ → 取り出す → 運ぶ → 置く」の順序を守る必要がある長いタスク</td>
+</tr>
+<tr class="even">
+<td><strong>成功条件</strong></td>
+<td>① パンがスロットに入った状態で、レバーを可動域の 90% 以上まで下げて作動させる　② パンが皿に接し、皿の中心から一定の距離内にある　③ グリッパーがパンから 25cm 以上離れている</td>
+</tr>
+<tr class="odd">
+<td><strong>ロボット・入出力</strong></td>
+<td>移動台車付きのロボットアーム。入力はカメラ 3 台（256×256）、状態 16 次元、指示文。行動は 12 次元</td>
+</tr>
+<tr class="even">
+<td><strong>起点モデル</strong></td>
+<td><code>lerobot/pi05_base</code>（RoboCasa 向けの学習がなく、RoboCasa の入出力も持たない）</td>
+</tr>
+<tr class="odd">
+<td><strong>学習データ</strong></td>
+<td>人間のデモ 506 本 / 654,840 フレーム（50 タスクの統合データセットから抽出）</td>
+</tr>
+<tr class="even">
+<td><strong>評価</strong></td>
+<td>50 本（seed 1000〜1049。キッチンの配置が毎回変わる）。上限 2000 step（20 fps で 100 秒）。最終モデルは 3600 step でも評価</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-工夫した点">2. 工夫した点</h2>
+<p>成功判定だけでは、どこまでできていて何が足りないかが分からない。そこで、タスクのどの段階まで進んだかを記録する診断を作り、足りない能力を特定しながら学習を進めた。</p>
+<ol type="1">
+<li><strong>入出力の対応付け</strong>: pi05_base に RoboCasa の入出力と正規化を付与。1 タスク分のデータを抽出し、指示文をそろえる</li>
+<li><strong>基本学習</strong>: 506 本で 10000 step。パンは掴めるが、全工程は完了しない</li>
+<li><strong>段階ごとの診断</strong>: 足りないのはレバー操作と「押す → 待つ → 取り出す」の順序</li>
+<li>次の 2 つを試した
+<ul>
+<li><strong>A. レバーのデモを追加（成功せず）</strong>: 作動はするが、その後パンを取り出せない</li>
+<li><strong>B. 視覚記憶（MEM）（成功）</strong>: 過去 5 秒の画像を入力。待ってから取り出し、皿へ運ぶ</li>
+</ul></li>
+</ol>
+<ul>
+<li><strong>① 入出力の対応付け</strong>: <code>pi05_base</code> は行動・状態が 32 次元で、カメラ名も RoboCasa と違い、正規化の統計量も持たない。そこで、RoboCasa の入出力と統計量を付けた 0 step のチェックポイントを作り、学習の起点にした。また、統合データの task 文字列（タスク名）を評価時に環境が渡す自然文の指示に書き換え、学習と評価の入力をそろえた。</li>
+<li><strong>② 基本学習</strong>（batch 32、10000 step、10 時間 59 分）: トースターの前まで移動し、パンを掴めるようになったが、全工程を完了したエピソードはなかった。</li>
+<li><strong>③ 段階ごとの診断</strong>: 毎 step のシミュレータの状態（レバー位置、作動、ポップアップ、把持、皿との接触）から到達した段階を判定した。基本学習のモデルは 18/20 本でレバーを押し切れず、レバーを押さずにパンを取り出す例も多かった。レバーが上がってパンがスロットにある画面は、押す前とポップアップ後でほぼ同じに見えるため、現在の画像だけでは区別できないと考えた。</li>
+<li><strong>A. レバー操作のデモを追加</strong>: レバーを押すだけのタスク TurnOnToaster のデモ 2,508 本を加えて学習した。レバーは作動させられるが、ポップアップ後にパンを取り出す例は出なかった。</li>
+<li><strong>B. 視覚記憶（MEM）</strong>: LeRobot の Pi0.5 にある視覚記憶を有効にし、1 秒おきに過去 5 秒分の画像を入力した（追加パラメータなし）。4000 回更新したモデルは、50 本中 7 本でポップアップを待ってからパンを取り出し、<strong>1 本（ep 36）が 1,803 step で全工程を完了して成功した</strong>（図 1。標準の上限 2000 step 以内）。</li>
+<li><strong>課題</strong>: 成功はまだ偶然に左右される（同じモデルを上限 2000 step で評価した別の回では 0 本）。焼いたパンを皿のすぐ横に置いた例が 3 本あり、置く位置がずれている。動作も遅い。</li>
+</ul>
+<p><strong>図 1　MEM で追加学習したモデル（4000 回更新）が各段階まで進んだ本数（50 本中、上限 3600 step）</strong></p>
+<table>
+<thead>
+<tr class="header">
+<th>段階</th>
+<th style="text-align: right;">本数</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>レバーを押して作動</td>
+<td style="text-align: right;">11 本</td>
+</tr>
+<tr class="even">
+<td>ポップアップ</td>
+<td style="text-align: right;">11 本</td>
+</tr>
+<tr class="odd">
+<td>ポップアップ後にパンを掴む</td>
+<td style="text-align: right;">7 本</td>
+</tr>
+<tr class="even">
+<td>焼いたパンを皿へ運ぶ</td>
+<td style="text-align: right;">4 本</td>
+</tr>
+<tr class="odd">
+<td><strong>成功</strong></td>
+<td style="text-align: right;"><strong>1 本</strong></td>
+</tr>
+</tbody>
+</table>
+<p>段階は成功に必要な順に並べた。「焼いたパンを皿へ運ぶ」4 本のうち 1 本が成功し、3 本は皿の中心から 12〜15cm の位置に置いた。</p>
+<h2 id="3-本タスクを通じて検証したこと">3. 本タスクを通じて検証したこと</h2>
+<ul>
+<li><strong>「操作して、終わるまで待つ」作業を記憶で扱える</strong>: トースター、電子レンジ、電気ケトル、洗濯機など、今の画像だけでは「操作前」と「完了後」を区別できない家庭の作業は多い。追加パラメータなしで過去の画像を入力に加えるだけで、待ってから取り出す全工程を完了できた。</li>
+<li><strong>汎用モデルに新しい環境の作業を教えられる</strong>: 入出力の対応付けと 1 タスク分のデモ（506 本）で、RoboCasa 向けの学習がない汎用モデルに、移動台車付きロボットの長い作業をさせられた。実機でも、テレオペレーションで集めたデモで汎用 VLA に新しい作業をさせる使い方に対応する。</li>
+<li><strong>段階ごとの診断は実機の評価にも使える</strong>: 段階（操作、把持、運搬、配置）ごとの到達を記録すれば、足りない能力が分かり、手法を根拠を持って選べる。実機の試行は時間も費用もかかるので、シミュレーションで診断して方針を決めてから実機に移る使い方ができる。</li>
+<li><strong>制約</strong>: 結果はシミュレーションだけのもので、実機では検証していない。成功は 50 本中 1 本で、動作もデモ（平均約 1,300 フレーム）より遅い。MEM の学習には GPU メモリ約 79GB が必要である。</li>
+</ul>
+<h2 id="4-動画の構成">4. 動画の構成</h2>
+<p>動画は、MEM で追加学習したモデルが GetToastedBread の全工程を実行する様子を示す（約 131 秒、20 fps）。</p>
+<table>
+<thead>
+<tr class="header">
+<th>時刻</th>
+<th>内容</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>0:00〜0:08</td>
+<td>トースターのレバーを押し下げて作動させる（8.5 秒）</td>
+</tr>
+<tr class="even">
+<td>0:08〜0:33</td>
+<td>パンが焼けて、レバーが上がる（ポップアップ）のを待つ（33.5 秒）</td>
+</tr>
+<tr class="odd">
+<td>0:33〜1:28</td>
+<td>ポップアップ後、トースターからパンを掴む（87.9 秒）</td>
+</tr>
+<tr class="even">
+<td>1:28〜2:01</td>
+<td>パンをダイニングカウンターの皿まで運んで置き（118.4 秒）、手を離して成功判定になる（120.8 秒）</td>
+</tr>
+<tr class="odd">
+<td>2:01〜2:11</td>
+<td>成功後も 10 秒続け、パンが皿に留まり成功判定が続くことを見せる</td>
+</tr>
+</tbody>
+</table>
+</body>
+</html>
